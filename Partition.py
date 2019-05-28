@@ -7,7 +7,9 @@ Uses K-means clustering.
 from sklearn.cluster import KMeans
 import csv
 import numpy as np
+from functools import reduce
 from queue import Queue
+from LineSegment import LineSegment
 """
 How to split trajectories meaningfully? TRACLUS!
 """
@@ -120,7 +122,7 @@ class Partition():
                     right_queue.put_nowait((average_x, average_y))
 
 
-    def trajectory_partition(trajectory):
+    def trajectory_partition(self, trajectory):
         """
         Input: A trajectory T Ri = p1p2p3 · · · pj · · · pleni
         Output: A set CPi of characteristic points
@@ -129,8 +131,8 @@ class Partition():
         02: startIndex := 1, length := 1;
         03: while (startIndex + length ≤ leni) do
         04: currIndex := startIndex + length;
-        05: costpar := MDLpar(pstartIndex, pcurrIndex);
-        06: costnopar := MDLnopar(pstartIndex, pcurrIndex);
+        05: cost_par := MDL_par(pstartIndex, pcurrIndex);
+        06: cost_nopar := MDL_nopar(pstartIndex, pcurrIndex);
         /* check if partitioning at the current point makes
         the MDL cost larger than not partitioning */
         07: if (costpar > costnopar) then
@@ -143,16 +145,61 @@ class Partition():
         into the set CPi; /* the ending point */
         (Lee, Han, & Whang, 2007)
         """
-        startIndex = 1
+        start_index = 0
         length = 1
         characteristic_points = []
+        segments = []
+        last_point = None
+        for point in trajectory:
+            if last_point is not None:
+                segments.append(LineSegment(last_point, point))
+            last_point = point
+        segments = np.array(segments)
         characteristic_points.append(trajectory[0])
-        while startIndex + length < len(trajectory):
-            currIndex = startIndex + length
+        while start_index + length < len(trajectory):
+            curr_index = start_index + length
+            """
+            MDL_par denotes the MDL Cost of a trajectory between p_i and p_j,
+            when assuming that p_i and p_j are the only characteristic points.
+            MDL_nopar denotes the MDL cost when assuming there is no characteristic
+            point between the two, i.e preserving the original trajectory.
+            """
+            cost_par = self.MDL_cost(segments[start_index:curr_index], [trajectory[start_index], trajectory[curr_index]])
+            cost_nopar = self.MDL_cost(segments[start_index:curr_index])
+            if cost_par > cost_nopar:
+                characteristic_points.append(trajectory[curr_index -1])
+                start_index = curr_index - 1
+                length = 1
+            else:
+                length += 1
+        characteristic_points.append(trajectory[len(trajectory) -1])
+        return characteristic_points
 
-        pass
+    def MDL_cost(self, segments, characteristic_points = []):
+        if len(characteristic_points) is 0:
+            #MDLnopar
+            LH = 0.0
+            for segment in segments:
+                LH += segment.length
+            return np.log2(LH)
+        characteristic_segment = LineSegment(characteristic_points[0], characteristic_points[1])
+        LH = np.log2(characteristic_segment.length)
+        perp_d = 0.0
+        ang_d = 0.0
+        for segment in segments:
+            perp_d += segment.perpendicular_distance(characteristic_segment)
+            ang_d += segment.angle_distance(characteristic_segment)
+        if perp_d != 0.0:
+            perp_d = np.log2(perp_d)
+        if ang_d != 0.0:
+            ang_d = np.log2(ang_d)
+        return LH + perp_d + ang_d
+
+
+
 
 if __name__=="__main__":
     p = Partition(0.1, 30)
     p.pre_process()
-    print(p.left_trajectories)
+    print(p.left_trajectories[1], "\n\n\n")
+    print(p.trajectory_partition(p.left_trajectories[1]))

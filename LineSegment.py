@@ -7,7 +7,10 @@ class LineSegment():
          self.b = b
          self.vector = b - a
          self.length = np.linalg.norm(self.vector)
-         self.unit = self.vector/np.linalg.norm(self.vector)
+         if self.length == 0.0:
+             self.unit = self.vector
+         else:
+             self.unit = self.vector/self.length
 
      def longer_than(self, other):
          return self.vector.dot(self.vector) > other.vector.dot(other.vector)
