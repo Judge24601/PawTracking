@@ -216,15 +216,22 @@ if __name__=="__main__":
     p.pre_process("second.csv")
     fig = plt.figure()
     img = mpimg.imread("ref.png")
-    c = Cluster(1.7, 15)
+    c = Cluster(1.6, 15)
     plt.imshow(img)
-    temp_traj = []
+    temp_trajl = []
+    temp_trajr = []
+    for trajectory in p.left_trajectories:
+        lines = p.trajectory_partition(trajectory)[1]
+        for line in lines:
+            temp_trajl.append(line)
     for trajectory in p.right_trajectories:
         lines = p.trajectory_partition(trajectory)[1]
         for line in lines:
-            temp_traj.append(line)
+            temp_trajr.append(line)
     cmap = plt.cm.jet
-    clusters = c.segment_cluster(temp_traj)
+    clusters = c.segment_cluster(temp_trajl)
+    for cluster in c.segment_cluster(temp_trajr):
+         clusters.append(cluster)
     c_norm = colours.Normalize(vmin=0, vmax = len(clusters))
     scalar_map = cmx.ScalarMappable(norm= c_norm, cmap=cmap)
     for i in range(0, len(clusters)):
