@@ -38,6 +38,9 @@ class LineSegment():
              return self.length * np.sin(angle)
              pass
 
+     def distance(self, other):
+         return min(self.length, other.length) + self.perpendicular_distance(other) + self.angle_distance(other)
+
 if __name__ =="__main__":
     #Example
     l1 = LineSegment(np.array([2, 2]), np.array([3, 3]))

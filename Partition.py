@@ -4,12 +4,16 @@ Then, in real time, classify the current trajectory as one of the n clusters.
 Uses K-means clustering.
 """
 
-from sklearn.cluster import KMeans
 import csv
 import numpy as np
 from functools import reduce
 from queue import Queue
 from LineSegment import LineSegment
+from Cluster import Cluster
+import matplotlib.pyplot as plt
+import matplotlib.colors as colours
+import matplotlib.cm as cmx
+import matplotlib.image as mpimg
 """
 How to split trajectories meaningfully? TRACLUS!
 """
@@ -22,7 +26,7 @@ class Partition():
         self.right_trajectories = []
         self.min_velocity = min_velocity
 
-    def pre_process(self):
+    def pre_process(self, file):
         """
         Separate the historical data of the mouse into specific trajectories.
         We define a specific trajectory as any set of fifteen or more frames where
@@ -36,7 +40,7 @@ class Partition():
         tempr_trajectory = []
         left_moving = False
         right_moving = False
-        with open("eight_points.csv") as csvfile:
+        with open(file) as csvfile:
             reader = csv.reader(csvfile)
             for row in reader:
                 try:
@@ -158,6 +162,7 @@ class Partition():
         characteristic_points.append(trajectory[0])
         while start_index + length < len(trajectory):
             curr_index = start_index + length
+            print(curr_index, len(trajectory))
             """
             MDL_par denotes the MDL Cost of a trajectory between p_i and p_j,
             when assuming that p_i and p_j are the only characteristic points.
@@ -166,14 +171,22 @@ class Partition():
             """
             cost_par = self.MDL_cost(segments[start_index:curr_index], [trajectory[start_index], trajectory[curr_index]])
             cost_nopar = self.MDL_cost(segments[start_index:curr_index])
-            if cost_par > cost_nopar:
+            print(cost_par, cost_nopar)
+            if cost_par > cost_nopar + 10:
                 characteristic_points.append(trajectory[curr_index -1])
                 start_index = curr_index - 1
                 length = 1
             else:
                 length += 1
         characteristic_points.append(trajectory[len(trajectory) -1])
-        return characteristic_points
+        char_segments = []
+        last_point = None
+        for point in characteristic_points:
+            if last_point is not None:
+                char_segments.append(LineSegment(last_point, point))
+            last_point = point
+        char_segments = np.array(char_segments)
+        return (characteristic_points, char_segments)
 
     def MDL_cost(self, segments, characteristic_points = []):
         if len(characteristic_points) is 0:
@@ -199,7 +212,30 @@ class Partition():
 
 
 if __name__=="__main__":
-    p = Partition(0.1, 30)
-    p.pre_process()
-    print(p.left_trajectories[1], "\n\n\n")
-    print(p.trajectory_partition(p.left_trajectories[1]))
+    p = Partition(0.1, 40)
+    p.pre_process("second.csv")
+    fig = plt.figure()
+    img = mpimg.imread("ref.png")
+    c = Cluster(1.7, 15)
+    plt.imshow(img)
+    temp_traj = []
+    for trajectory in p.right_trajectories:
+        lines = p.trajectory_partition(trajectory)[1]
+        for line in lines:
+            temp_traj.append(line)
+    cmap = plt.cm.jet
+    clusters = c.segment_cluster(temp_traj)
+    c_norm = colours.Normalize(vmin=0, vmax = len(clusters))
+    scalar_map = cmx.ScalarMappable(norm= c_norm, cmap=cmap)
+    for i in range(0, len(clusters)):
+        cluster= clusters[i]
+        color_val = scalar_map.to_rgba(i)
+        for line in cluster:
+            plt.arrow(line.a[0], #x1
+                      line.a[1], #y1
+                      line.vector[0], #x2-x1
+                      line.vector[1], #y2-y1
+                      color=color_val)
+    #plt.axis(( 300, 600,  480, 300))
+
+    plt.show()
