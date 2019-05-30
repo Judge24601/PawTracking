@@ -13,33 +13,31 @@ class Cluster():
         self.cluster_info = []
         pass
 
-    def epsilon_neighbourhood(self, segment):
-        return set(filter((lambda x: x.distance(segment) <= self.epsilon), self.lines))
+    def epsilon_neighbourhood(self, segment, lines):
+        return set(filter((lambda x: x.distance(segment) <= self.epsilon), lines))
 
     def segment_cluster(self, segments):
         cluster_id = 0
         # print("clustering")
         self.lines = segments
         for obj_segment in self.lines:
-            if obj_segment.cluster == "unclassified":
-                neighbourhood = self.epsilon_neighbourhood(obj_segment)
+            if obj_segment.cluster == -1:
+                neighbourhood = self.epsilon_neighbourhood(obj_segment, self.lines)
                 if len(neighbourhood) >= self.min_lns:
                     queue = Queue()
                     for line in neighbourhood:
                         if line is not obj_segment:
                             queue.put_nowait(obj_segment)
-                    # print("expand now")
                     self.expand_cluster(queue, cluster_id)
-                    print(cluster_id)
                     cluster_id += 1
                 else:
-                    obj_segment.cluster = "noise"
+                    obj_segment.cluster = -2
         clusters = []
         for i in range (0, cluster_id):
             clusters.append([])
         # print("done")
         for line in self.lines:
-            if type(line.cluster) is int:
+            if line.cluster > -1:
                 clusters[line.cluster].append(line)
         return clusters
         pass
@@ -48,13 +46,13 @@ class Cluster():
         """Compute a density-connected set"""
         while not queue.empty():
             line  = queue.get_nowait()
-            neighbourhood = self.epsilon_neighbourhood(line)
+            neighbourhood = self.epsilon_neighbourhood(line, self.lines)
             if len(neighbourhood) >= self.min_lns:
                 for line in neighbourhood:
-                    if line.cluster is "unclassified":
+                    if line.cluster is -1:
                         line.cluster = cluster_id
                         queue.put_nowait(line)
-                    if line.cluster is "noise":
+                    if line.cluster is -2:
                         line.cluster = cluster_id
         pass
 
@@ -71,14 +69,11 @@ class Cluster():
 
     def classify_segment(self, clusters, segment):
         for i in range(0, len(clusters)):
-            if self.cluster_info[i]["average"].distance(segment) <= self.epsilon:
+            if len(self.epsilon_neighbourhood(segment, clusters[i])) > 0:
                 clusters[i].append(segment)
-                av_vector = self.cluster_info[i]["average"].vector + segment.vector/self.cluster_info[i]["num"]
-                av_start = self.cluster_info[i]["average"].a + segment.a/self.cluster_info[i]["num"]
-                self.cluster_info[i] = {"average": LineSegment(av_start, av_start + av_vector), "num": len(clusters[i])}
                 return i
             i+=1
-            return -1
+        return -1
 
     def representative_trajectory(self, cluster):
         # TODO: Fix this :/

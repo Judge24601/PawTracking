@@ -76,7 +76,6 @@ partitions = partition(partitioner)
 clusters = clusterer.segment_cluster(partitions[0])
 for cluster in clusterer.segment_cluster(partitions[1]):
      clusters.append(cluster)
-print("done clustering")
 fig = plt.figure()
 cmap = plt.cm.jet
 # plt.ion()
@@ -95,7 +94,7 @@ n = 4000
 # updater.start()
 clusterer.average_segments(clusters)
 partitioner.clear_trajectories()
-while (partitioner.pre_process(FILE_NAME, n, 100) > n):
+while (partitioner.pre_process(FILE_NAME, n, 16) > n):
     temp_cycle_time = time.time() - last_time
     if temp_cycle_time > cycle_time:
         cycle_time = temp_cycle_time
@@ -104,8 +103,6 @@ while (partitioner.pre_process(FILE_NAME, n, 100) > n):
     for paw in partitions:
         for line in paw:
             m = clusterer.classify_segment(clusters, line)
-            if m > -1:
-                print ("Motion clustered to ", m)
     # if not updater.is_alive():
     #     print("updater complete")
     #     clusters = updater.clusters
@@ -113,7 +110,6 @@ while (partitioner.pre_process(FILE_NAME, n, 100) > n):
     #     updater = ClusterUpdater(partitioner, update_clusterer, clusters.copy())
     #     updater.start()
     partitioner.clear_trajectories()
-    print(n)
     n+= 1
 print("Highest Cycle Time:", cycle_time)
 plot_clusters(clusters)
