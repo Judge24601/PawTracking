@@ -11,6 +11,7 @@ class LineSegment():
              self.unit = self.vector
          else:
              self.unit = self.vector/self.length
+         self.cluster = "unclassified"
 
      def longer_than(self, other):
          return self.vector.dot(self.vector) > other.vector.dot(other.vector)
