@@ -50,7 +50,7 @@ def partition(partitioner):
         for line in lines:
             temp_trajr.append(line)
 
-    return (temp_trajl, temp_trajr)
+    return ([], temp_trajr)
 """
 clusters = clusterer.segment_cluster(temp_trajl)
 for cluster in clusterer.segment_cluster(temp_trajr):
@@ -86,7 +86,8 @@ plot_clusters(clusters)
 """
 Real time!
 """
-cycle_time = 0.0
+max_cycle_time = 0.0
+min_cycle_time = 9999.0
 last_time = time.time()
 n = 4000
 # update_clusterer = Cluster(EPSILON, MIN_LINES)
@@ -94,10 +95,13 @@ n = 4000
 # updater.start()
 clusterer.average_segments(clusters)
 partitioner.clear_trajectories()
+start = time.time()
 while (partitioner.pre_process(FILE_NAME, n, 16) > n):
     temp_cycle_time = time.time() - last_time
-    if temp_cycle_time > cycle_time:
-        cycle_time = temp_cycle_time
+    if temp_cycle_time > max_cycle_time:
+        max_cycle_time = temp_cycle_time
+    if temp_cycle_time < min_cycle_time:
+        min_cycle_time = temp_cycle_time
     last_time = time.time()
     partitions = partition(partitioner)
     for paw in partitions:
@@ -111,6 +115,9 @@ while (partitioner.pre_process(FILE_NAME, n, 16) > n):
     #     updater.start()
     partitioner.clear_trajectories()
     n+= 1
-print("Highest Cycle Time:", cycle_time)
+end = time.time()
+av_time = end-start/(n-4000)
+print("Highest Cycle Time:", max_cycle_time)
+print("Average Cycle Time:", av_time)
 plot_clusters(clusters)
 plt.show()
