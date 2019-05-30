@@ -71,7 +71,7 @@ Setup! Processes the first n lines of the csv to begin the clustering.
 """
 partitioner = Partition(LIKELIHOOD_THRES, MIN_VELOCITY)
 clusterer = Cluster(EPSILON, MIN_LINES)
-partitioner.pre_process(FILE_NAME, 0, 4000)
+partitioner.pre_process(FILE_NAME, 0, 7000)
 partitions = partition(partitioner)
 clusters = clusterer.segment_cluster(partitions[0])
 for cluster in clusterer.segment_cluster(partitions[1]):
@@ -95,7 +95,7 @@ n = 4000
 # updater.start()
 clusterer.average_segments(clusters)
 partitioner.clear_trajectories()
-while (partitioner.pre_process(FILE_NAME, n, 15) > n):
+while (partitioner.pre_process(FILE_NAME, n, 100) > n):
     temp_cycle_time = time.time() - last_time
     if temp_cycle_time > cycle_time:
         cycle_time = temp_cycle_time
@@ -103,7 +103,9 @@ while (partitioner.pre_process(FILE_NAME, n, 15) > n):
     partitions = partition(partitioner)
     for paw in partitions:
         for line in paw:
-            clusterer.classify_segment(clusters, line)
+            m = clusterer.classify_segment(clusters, line)
+            if m > -1:
+                print ("Motion clustered to ", m)
     # if not updater.is_alive():
     #     print("updater complete")
     #     clusters = updater.clusters
