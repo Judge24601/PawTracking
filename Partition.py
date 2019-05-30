@@ -7,6 +7,7 @@ Uses K-means clustering.
 import csv
 import numpy as np
 from functools import reduce
+from itertools import islice
 from queue import Queue
 from LineSegment import LineSegment
 from Cluster import Cluster
@@ -25,6 +26,8 @@ class Partition():
         self.likelihood_threshold = likelihood_threshold
         self.left_trajectories = []
         self.right_trajectories = []
+        self.reader = None
+        self.file = None
         self.min_velocity = min_velocity
 
     def pre_process(self, file, start=0, length = 2000):
@@ -42,19 +45,18 @@ class Partition():
         left_moving = False
         right_moving = False
         with open(file) as csvfile:
-            reader = csv.reader(csvfile)
-            count = 0
-            for row in reader:
-                if count < start:
-                    count += 1
-                    continue
-                if count > start+length:
-                    break
-                count += 1
+            if self.reader is None or file is not self.file:
+                self.reader = list(csv.reader(csvfile))
+                self.file = file
+            if start >= len(self.reader):
+                print("out of range", start)
+                return False
+            for index in range(start, min(start+length, len(self.reader))):
                 try:
-                    row = list(map(float, row))
+                    row = list(map(float, self.reader[index]))
                 except Exception as e:
                     continue
+                # print(index, row)
                 #Processing data now
                 i = 1
                 average_x = 0.0
@@ -132,7 +134,7 @@ class Partition():
                                 tempr_trajectory = []
                                 right_moving = False
                     right_queue.put_nowait((average_x, average_y))
-        return count
+        return True
 
     def clear_trajectories(self):
         """
@@ -207,9 +209,14 @@ class Partition():
             LH = 0.0
             for segment in segments:
                 LH += segment.length
-            return np.log2(LH)
+            if LH != 0.0:
+                return np.log2(LH)
+            return 0.0
         characteristic_segment = LineSegment(characteristic_points[0], characteristic_points[1])
-        LH = np.log2(characteristic_segment.length)
+        if characteristic_segment.length > 0.0:
+            LH = np.log2(characteristic_segment.length)
+        else:
+            LH = 0.0
         perp_d = 0.0
         ang_d = 0.0
         for segment in segments:
